@@ -202,6 +202,7 @@ class ServerAcceptor : public Acceptor,
     tInfoPtr->appProtocol =
         std::make_shared<std::string>(connInfo.nextProtoName);
 
+    // QM: 每次请求创建一个 child pipeline
     auto pipeline = childPipelineFactory_->newPipeline(
         std::shared_ptr<folly::AsyncTransport>(
             transport.release(), folly::DelayedDestruction::Destructor()));
@@ -231,6 +232,7 @@ class ServerAcceptor : public Acceptor,
         nextProtocolName,
         secureTransportType,
         tinfo};
+    // QM: 全局一个 accept pipeline
     acceptPipeline_->read(connInfo);
   }
 

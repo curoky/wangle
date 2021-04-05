@@ -75,6 +75,9 @@ class AsyncSocketHandler : public wangle::BytesToBytesHandler,
   }
 
   void transportActive(Context* ctx) override {
+    // QM: async_socket 到 pipeline 的关键节点
+    // 传入的是 socket 信息
+    // 在这里进行回调的注册
     ctx->getPipeline()->setTransport(socket_);
     attachReadCallback();
     firedInactive_ = false;
@@ -138,6 +141,8 @@ class AsyncSocketHandler : public wangle::BytesToBytesHandler,
 
   void getReadBuffer(void** bufReturn, size_t* lenReturn) override {
     const auto readBufferSettings = getContext()->getReadBufferSettings();
+    // QM: 每次 socket 可以读了, 就预分配一块内存（默认长度 2048）, 这里只返回指针
+    // QM: 怎么保证不写越界? 因为这里返回了可以写的长度啊
     const auto ret = bufQueue_.preallocate(
         readBufferSettings.first, readBufferSettings.second);
     *bufReturn = ret.first;
@@ -145,7 +150,10 @@ class AsyncSocketHandler : public wangle::BytesToBytesHandler,
   }
 
   void readDataAvailable(size_t len) noexcept override {
+    // QM: 这里是 async_socket 可写事件的回调,
+    // 此处调用时, socket 读已经完成, 内容已经写到buf queue里面了
     refreshTimeout();
+    // QM: 因为从socket 中读到了 len 长度, 所以告诉 bufqueue 读了多少,
     bufQueue_.postallocate(len);
     getContext()->fireRead(bufQueue_);
   }
@@ -201,6 +209,7 @@ class AsyncSocketHandler : public wangle::BytesToBytesHandler,
     folly::Promise<folly::Unit> promise_;
   };
 
+  // QM: 这里可以优化下? 每次请求重新创建 bufQueue_ 比较费
   folly::IOBufQueue bufQueue_{folly::IOBufQueue::cacheChainLength()};
   std::shared_ptr<folly::AsyncTransport> socket_{nullptr};
   bool firedInactive_{false};
