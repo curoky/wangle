@@ -112,6 +112,9 @@ class AsyncSocketHandler : public wangle::BytesToBytesHandler,
 
     auto cb = new WriteCallback();
     auto future = cb->promise_.getFuture();
+    // QM: 这里如何保证在 eventbase thread
+    // 是否真的需要: 看AsyncSocket 里面是需要的
+    // 这里没有保证: 所以如果要切CPU 线程池, 需要加 EventBaseHandler
     socket_->writeChain(cb, std::move(buf), ctx->getWriteFlags());
     return future;
   }
