@@ -79,6 +79,7 @@ class AsyncSocketHandler : public wangle::BytesToBytesHandler,
     // 传入的是 socket 信息
     // 在这里进行回调的注册
     ctx->getPipeline()->setTransport(socket_);
+    // QM: 这里给 async socket setReadCB, 同时会更新 epoll event 增加读事件, 注意这里应该没有注册写事件
     attachReadCallback();
     firedInactive_ = false;
     ctx->fireTransportActive();
@@ -115,6 +116,8 @@ class AsyncSocketHandler : public wangle::BytesToBytesHandler,
     // QM: 这里如何保证在 eventbase thread
     // 是否真的需要: 看AsyncSocket 里面是需要的
     // 这里没有保证: 所以如果要切CPU 线程池, 需要加 EventBaseHandler
+    // QM: 这里如何保证读事件已经 done 掉了, 这里看起来应该不保证读事件down了,
+    // 调用这个函数后, 会尽力往 socket 里面写, 如果写满了, 会注册写事件异步写。
     socket_->writeChain(cb, std::move(buf), ctx->getWriteFlags());
     return future;
   }
@@ -153,7 +156,7 @@ class AsyncSocketHandler : public wangle::BytesToBytesHandler,
   }
 
   void readDataAvailable(size_t len) noexcept override {
-    // QM: 这里是 async_socket 可写事件的回调,
+    // QM: 这里是 async_socket 可读事件的回调
     // 此处调用时, socket 读已经完成, 内容已经写到buf queue里面了
     refreshTimeout();
     // QM: 因为从socket 中读到了 len 长度, 所以告诉 bufqueue 读了多少,

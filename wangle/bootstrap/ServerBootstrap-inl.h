@@ -211,6 +211,7 @@ class ServerAcceptor : public Acceptor,
         new ServerConnection(std::move(pipeline), *connInfo.clientAddr);
     connection->setNotifyPendingShutdown(enableNotifyPendingShutdown_);
     Acceptor::addConnection(connection);
+    // 给 async socket 注册 read cb, 同时更新epoll 事件
     connection->init();
   }
 
