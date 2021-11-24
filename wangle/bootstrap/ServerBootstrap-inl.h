@@ -124,6 +124,7 @@ class ServerAcceptor : public Acceptor,
 
     void deletePipeline(wangle::PipelineBase* p) override {
       CHECK(p == pipeline_.get());
+      // QM: 在这里析构的链接, 那 pipeline 跟随 connection 析构
       destroy();
     }
 
@@ -131,6 +132,7 @@ class ServerAcceptor : public Acceptor,
       pipeline_->transportActive();
     }
 
+    // QM: 这里很关键, 每次读写, 都会触发这
     void refreshTimeout() override {
       resetTimeout();
     }
@@ -194,6 +196,7 @@ class ServerAcceptor : public Acceptor,
 
     // Setup local and remote addresses
     auto tInfoPtr = std::make_shared<TransportInfo>(connInfo.tinfo);
+    // QM: 这两行代码重复赋值了吧
     tInfoPtr->localAddr =
         std::make_shared<folly::SocketAddress>(accConfig_.bindAddress);
     transport->getLocalAddress(tInfoPtr->localAddr.get());
@@ -207,6 +210,8 @@ class ServerAcceptor : public Acceptor,
         std::shared_ptr<folly::AsyncTransport>(
             transport.release(), folly::DelayedDestruction::Destructor()));
     pipeline->setTransportInfo(tInfoPtr);
+    // QM: connection 的生命周期如何保证?
+    // 特别注意, 这里是 new 出来的, 需要看看 delete 的位置
     auto connection =
         new ServerConnection(std::move(pipeline), *connInfo.clientAddr);
     connection->setNotifyPendingShutdown(enableNotifyPendingShutdown_);

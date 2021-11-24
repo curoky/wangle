@@ -88,6 +88,8 @@ class AsyncServerSocketFactory : public ServerSocketFactory {
     socket->addAcceptCallback(callback, base);
   }
 
+  // AsyncServerSocket 在 accept 线程里面去析构。
+  // 不能在主线程析构的一个原因是 gardcount 不是 atomic 变量。
   class ThreadSafeDestructor {
    public:
     void operator()(folly::AsyncServerSocket* socket) const {
