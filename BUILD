@@ -13,7 +13,7 @@
 # limitations under the License.
 
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("@com_curoky_tame//bazel:copts.bzl", "DEFAULT_CPP_COPTS")
+load("//:build/bazel/copts.bzl", "DEFAULT_CPP_COPTS")
 
 cc_library(
     name = "wangle",
